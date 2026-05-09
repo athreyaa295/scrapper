@@ -18,11 +18,10 @@ except ImportError:
     feedparser = None
 
 try:
-    from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig
-    from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
-    CRAWL4AI_AVAILABLE = True
+    from playwright.async_api import async_playwright
+    PLAYWRIGHT_AVAILABLE = True
 except ImportError:
-    CRAWL4AI_AVAILABLE = False
+    PLAYWRIGHT_AVAILABLE = False
 
 try:
     from bs4 import BeautifulSoup
@@ -78,53 +77,49 @@ def _scrape_devpost_fallback() -> List[Dict[str, Any]]:
     return events
 
 async def scrape_devpost() -> List[Dict[str, Any]]:
-    if not CRAWL4AI_AVAILABLE: return _scrape_devpost_fallback()
+    if not PLAYWRIGHT_AVAILABLE: return _scrape_devpost_fallback()
     events = []
     try:
-        schema = {"name": "Devpost", "baseSelector": ".hackathon-tile",
-            "fields": [
-                {"name": "title", "selector": "h3, .title", "type": "text"},
-                {"name": "link", "selector": "a", "type": "attribute", "attribute": "href"},
-                {"name": "status", "selector": ".submission-period, .dates", "type": "text"},
-            ]}
-        extraction = JsonCssExtractionStrategy(schema)
-        browser_cfg = BrowserConfig(headless=True, browser_type="chromium", verbose=False)
-        run_cfg = CrawlerRunConfig(extraction_strategy=extraction, wait_until="networkidle", page_timeout=30000)
-        async with AsyncWebCrawler(config=browser_cfg) as crawler:
-            result = await crawler.arun(url="https://devpost.com/hackathons?status[]=open&status[]=upcoming", config=run_cfg)
-            if result.success and result.extracted_content:
-                items = json.loads(result.extracted_content) if isinstance(result.extracted_content, str) else result.extracted_content
-                if isinstance(items, list) and items and isinstance(items[0], list): items = items[0]
-                for item in (items or []):
-                    title = item.get("title", "").strip()
-                    link = item.get("link", "")
-                    if link and not link.startswith("http"): link = f"https://devpost.com{link}"
-                    if title and len(title) > 3:
-                        events.append({"title": title, "link": link or "https://devpost.com/hackathons",
-                            "raw_date_text": item.get("status", "Open"), "source": "Devpost", "category": "Hackathon"})
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.goto("https://devpost.com/hackathons?status[]=open&status[]=upcoming", wait_until="networkidle", timeout=30000)
+            tiles = await page.query_selector_all(".hackathon-tile, article")
+            for tile in tiles:
+                title_el = await tile.query_selector("h3, .title")
+                link_el = await tile.query_selector("a")
+                status_el = await tile.query_selector(".submission-period, .dates")
+                title = (await title_el.inner_text()).strip() if title_el else ""
+                href = await link_el.get_attribute("href") if link_el else ""
+                status = (await status_el.inner_text()).strip() if status_el else "Open"
+                if href and not href.startswith("http"): href = f"https://devpost.com{href}"
+                if title and len(title) > 3:
+                    events.append({"title": title, "link": href or "https://devpost.com/hackathons",
+                        "raw_date_text": status, "source": "Devpost", "category": "Hackathon"})
+            await browser.close()
     except Exception as e:
-        print(f"  [WARN] Devpost: {e}")
+        print(f"  [WARN] Devpost Playwright: {e}")
         events = _scrape_devpost_fallback()
     return events
 
 async def scrape_mlh() -> List[Dict[str, Any]]:
     events = []
-    if not CRAWL4AI_AVAILABLE: return events
+    if not PLAYWRIGHT_AVAILABLE: return events
     try:
-        browser_cfg = BrowserConfig(headless=True, browser_type="chromium", verbose=False)
-        run_cfg = CrawlerRunConfig(wait_until="networkidle", page_timeout=30000)
-        async with AsyncWebCrawler(config=browser_cfg) as crawler:
-            result = await crawler.arun(url="https://mlh.io/seasons/2026/events", config=run_cfg)
-            if result.success and result.markdown:
-                for line in result.markdown.split("\n"):
-                    line = line.strip()
-                    if line.startswith("##"):
-                        title = re.sub(r"^#+\s*", "", line).strip()
-                        if title and len(title) > 3 and not _is_bad_title(title):
-                            events.append({"title": title, "link": "https://mlh.io/events",
-                                "raw_date_text": "Register by next month", "source": "MLH", "category": "Hackathon"})
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.goto("https://mlh.io/seasons/2026/events", wait_until="networkidle", timeout=30000)
+            cards = await page.query_selector_all(".event-wrapper, .event")
+            for card in cards:
+                title_el = await card.query_selector("h3, .event-name")
+                title = (await title_el.inner_text()).strip() if title_el else ""
+                if title and len(title) > 3 and not _is_bad_title(title):
+                    events.append({"title": title, "link": "https://mlh.io/events",
+                        "raw_date_text": "Register by next month", "source": "MLH", "category": "Hackathon"})
+            await browser.close()
     except Exception as e:
-        print(f"  [WARN] MLH: {e}")
+        print(f"  [WARN] MLH Playwright: {e}")
     return events
 
 async def scrape_unstop() -> List[Dict[str, Any]]:
@@ -469,7 +464,7 @@ def scrape_events() -> List[Event]:
     os_models_data = scrape_os_models()
     print(f"  -> {len(os_models_data)} items")
 
-    print("[9/10] Devpost + MLH + Unstop (Crawl4AI)...")
+    print("[9/10] Devpost + MLH + Unstop (Playwright)...")
     async_results = _run_async_scrapers()
     devpost_data = async_results.get("devpost", [])
     mlh_data = async_results.get("mlh", [])
@@ -520,8 +515,8 @@ def scrape_events() -> List[Event]:
 
 def _run_async_scrapers() -> Dict[str, List[Dict[str, Any]]]:
     results = {"devpost": [], "mlh": [], "unstop": []}
-    if not CRAWL4AI_AVAILABLE:
-        print("  [INFO] Crawl4AI not available, skipping JS sources")
+    if not PLAYWRIGHT_AVAILABLE:
+        print("  [INFO] Playwright not available, skipping JS sources")
         return results
 
     async def _gather():
