@@ -3,79 +3,35 @@ import requests
 import re
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-import google.generativeai as genai
 
 load_dotenv()
 
-# Gemini Free Tier Configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-
-# Groq Free Tier Configuration (for Gemma Cloud)
+# Groq Free Tier — serves Llama 3 models (100% open source, 100% free)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 
 def extract_deadline_and_validate(text: str) -> dict:
     """
-    Extracts deadline from text. Prioritizes Gemma (local/free) if available,
-    then Gemini (free tier), with a final fallback to smart regex parsing.
+    Extracts deadline from text. Uses Llama 3 (via Groq free tier) as primary,
+    with local Ollama Llama as backup, and smart regex as final fallback.
     """
-    # 1. Try Local Gemma (via Ollama) - 100% Free & Private (Local Dev)
-    gemma_result = _try_gemma_local(text)
-    if gemma_result:
-        return gemma_result
-
-    # 2. Try Gemma Cloud (via Groq Free Tier) - 100% Free (Production)
+    # 1. Try Llama 3 via Groq Cloud (Free Tier — open source model)
     if GROQ_API_KEY:
-        groq_result = _try_gemma_groq(text)
-        if groq_result:
-            return groq_result
+        llama_result = _try_llama_groq(text)
+        if llama_result:
+            return llama_result
 
-    # 3. Try Gemini Flash (Free Tier)
-    if GEMINI_API_KEY:
-        ai_result = _try_gemini(text)
-        if ai_result:
-            return ai_result
-            
-    # 3. Fallback: Smart regex/keyword-based extraction
+    # 2. Try Local Llama via Ollama — 100% Free & Private (Local Dev)
+    llama_local_result = _try_llama_local(text)
+    if llama_local_result:
+        return llama_local_result
+
+    # 3. Fallback: Smart regex/keyword-based extraction (no AI needed)
     return _smart_parse_deadline(text)
 
 
-def _try_gemma_local(text: str) -> dict | None:
-    """Try to use a local Gemma model via Ollama."""
-    url = "http://localhost:11434/api/generate"
-    prompt = f"""Extract the registration deadline from the following text.
-If there is no registration deadline mentioned, reply with "NONE".
-If there is a deadline, format it strictly as YYYY-MM-DD.
-Only output the date or NONE. No other text.
-
-Text: {text}"""
-    
-    try:
-        # Short timeout to avoid hanging if Ollama is not running
-        res = requests.post(url, json={
-            "model": "gemma",
-            "prompt": prompt,
-            "stream": False,
-            "options": {"temperature": 0.1}
-        }, timeout=5)
-        
-        if res.status_code == 200:
-            result = res.json().get("response", "").strip()
-            if result != "NONE" and len(result) <= 12:
-                try:
-                    deadline_date = datetime.strptime(result, "%Y-%m-%d")
-                    return _calculate_priority(deadline_date)
-                except ValueError:
-                    return None
-    except Exception:
-        return None
-    return None
-
-
-def _try_gemma_groq(text: str) -> dict | None:
-    """Try to use Gemma-2-9b via Groq Cloud API."""
+def _try_llama_groq(text: str) -> dict | None:
+    """Use Llama 3 70B via Groq Cloud API (free tier, open source model)."""
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -87,10 +43,10 @@ If there is a deadline, format it strictly as YYYY-MM-DD.
 Only output the date or NONE. No other text.
 
 Text: {text}"""
-    
+
     try:
         data = {
-            "model": "gemma2-9b-it",
+            "model": "llama-3.3-70b-versatile",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1
         }
@@ -108,28 +64,36 @@ Text: {text}"""
     return None
 
 
-def _try_gemini(text: str) -> dict | None:
-    """Try to use Gemini API for extraction. Returns None if unavailable."""
+def _try_llama_local(text: str) -> dict | None:
+    """Try to use a local Llama model via Ollama."""
+    url = "http://localhost:11434/api/generate"
     prompt = f"""Extract the registration deadline from the following text.
 If there is no registration deadline mentioned, reply with "NONE".
 If there is a deadline, format it strictly as YYYY-MM-DD.
-Do not output any other text, markdown, or explanations. Only the date or NONE.
+Only output the date or NONE. No other text.
 
-Text:
-{text}"""
+Text: {text}"""
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
-        result = response.text.strip()
-        
-        if result == "NONE" or not result or len(result) > 15:
-            return None
-        
-        deadline_date = datetime.strptime(result, "%Y-%m-%d")
-        return _calculate_priority(deadline_date)
+        # Short timeout to avoid hanging if Ollama is not running
+        res = requests.post(url, json={
+            "model": "llama3",
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": 0.1}
+        }, timeout=5)
+
+        if res.status_code == 200:
+            result = res.json().get("response", "").strip()
+            if result != "NONE" and len(result) <= 12:
+                try:
+                    deadline_date = datetime.strptime(result, "%Y-%m-%d")
+                    return _calculate_priority(deadline_date)
+                except ValueError:
+                    return None
     except Exception:
         return None
+    return None
 
 
 def _smart_parse_deadline(text: str) -> dict:

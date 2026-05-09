@@ -4,7 +4,6 @@ beautifulsoup4
 requests
 pydantic
 python-dotenv
-google-generativeai
 apscheduler
 crawl4ai
 feedparser
