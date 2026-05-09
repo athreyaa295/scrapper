@@ -1,0 +1,54 @@
+# Product Requirements Document (PRD)
+
+# Project Name
+Scrapper
+
+---
+
+# Overview
+
+Scrapper is a fully free mobile application that automatically scrapes opportunity/job/internship data once every day without requiring any paid server or VPS.
+
+The system must continue updating data even when the developer’s laptop is turned OFF.
+
+The architecture should use:
+- GitHub Actions for automation
+- Python scraping scripts
+- JSON-based storage
+- GitHub repository as free hosting
+- Flutter frontend for displaying data
+
+The entire system should remain:
+- serverless
+- scalable
+- low-maintenance
+- zero-cost
+
+---
+
+# Objectives
+
+## Primary Goals
+
+- Automatically scrape data daily
+- Avoid paid servers/VPS/cloud hosting
+- Keep system fully free
+- Ensure app works even when laptop is OFF
+- Make architecture scalable for future scraping sources
+- Provide reliable JSON data feed for mobile app
+
+---
+
+# Core Architecture
+
+```text
+GitHub Actions
+      ↓
+Runs Python Scraper Daily
+      ↓
+Updates JSON Files
+      ↓
+Commits JSON to GitHub Repo
+      ↓
+Flutter App Fetches Latest JSON
+```

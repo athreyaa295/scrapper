@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heta - Advanced Scouting Dashboard</title>
+    <meta name="description" content="Heta dashboard for events, hackathons, and research.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <h1 class="logo-text">He<span>ta</span></h1>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-category="All">
+                    <i class="fa-solid fa-layer-group"></i> All Opportunities
+                </a>
+                <a href="#" class="nav-item" data-category="Hackathon">
+                    <i class="fa-solid fa-code"></i> Hackathons
+                </a>
+                <a href="#" class="nav-item" data-category="Internship">
+                    <i class="fa-solid fa-briefcase"></i> Internships
+                </a>
+                <a href="#" class="nav-item" data-category="AI Research">
+                    <i class="fa-solid fa-microscope"></i> AI Research
+                </a>
+                <a href="#" class="nav-item" data-category="Conference">
+                    <i class="fa-solid fa-users"></i> Conferences
+                </a>
+                <a href="#" class="nav-item" data-category="Startup">
+                    <i class="fa-solid fa-rocket"></i> Startups
+                </a>
+                <a href="#" class="nav-item" data-category="AI News">
+                    <i class="fa-solid fa-newspaper"></i> AI News
+                </a>
+                <a href="#" class="nav-item" data-category="AI Technology">
+                    <i class="fa-solid fa-microchip"></i> New Tech Introduced
+                </a>
+                <a href="#" class="nav-item" data-category="Open Source Models">
+                    <i class="fa-solid fa-cube"></i> Open Source Models
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <button id="scan-btn" class="action-btn scan-btn">
+                    <i class="fa-solid fa-radar"></i> Deep Scan
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="search-bar">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Search events, news, research...">
+                </div>
+                <div class="header-actions">
+                    <div class="stat-badge total-stat">
+                        <span id="total-count">0</span> Total
+                    </div>
+                    <div class="stat-badge urgent-stat">
+                        <span id="urgent-count">0</span> Urgent
+                    </div>
+                    <div class="user-profile">
+                        <img src="https://ui-avatars.com/api/?name=User&background=6C63FF&color=fff" alt="User">
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="dashboard-header">
+                    <h2>Live Intelligence Feed</h2>
+                    <p>Real-time opportunities aggregated by Heta Engine.</p>
+                </div>
+                
+                <div class="status-indicator" id="status-indicator">
+                    <div class="spinner"></div> <span>Scanning sources...</span>
+                </div>
+
+                <div id="log-terminal" class="log-terminal">
+                    <div class="terminal-header">
+                        <span><i class="fa-solid fa-terminal"></i> Heta Live Scraper Logs</span>
+                        <button id="close-logs"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div id="log-content" class="log-content"></div>
+                </div>
+
+                <div class="events-grid" id="events-grid">
+                    <!-- Event cards will be injected here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Event Card Template (Hidden) -->
+    <template id="event-card-template">
+        <div class="event-card">
+            <div class="card-glow"></div>
+            <div class="card-content">
+                <div class="card-header">
+                    <span class="category-badge"></span>
+                    <span class="priority-badge"></span>
+                </div>
+                <h3 class="event-title"></h3>
+                <div class="event-source">
+                    <i class="fa-solid fa-globe"></i> <span class="source-text"></span>
+                </div>
+                <p class="event-description"></p>
+                <div class="card-footer">
+                    <div class="deadline-info">
+                        <span class="deadline-label">DEADLINE</span>
+                        <span class="deadline-text"></span>
+                    </div>
+                    <div class="card-actions">
+                        <a href="#" target="_blank" class="action-btn apply-btn">Open <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                        <button class="action-btn auto-apply-btn" title="AI Agent Auto-Apply">
+                            <i class="fa-solid fa-robot"></i> Auto-Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="app.js"></script>
+</body>
+</html>

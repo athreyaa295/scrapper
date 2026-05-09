@@ -1,0 +1,11 @@
+[
+  {
+    "title": "Initial Setup Data",
+    "registration_link": "https://github.com",
+    "registration_deadline": "Apply ASAP",
+    "source": "System",
+    "category": "Event",
+    "priority": "🟢 LOW PRIORITY",
+    "description": "This is initial dummy data. The GitHub Action scraper will override this soon."
+  }
+]
